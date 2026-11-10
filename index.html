@@ -1,0 +1,1915 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f172a" />
+  <meta name="description" content="Meet It — instant, secure HD video meetings in your browser. Create a meeting, share the 6-digit code, and talk face to face." />
+  <title>Meet It — Video Meetings</title>
+
+  <!-- Favicon: inline SVG version of the Meet It mark, so no extra files are needed -->
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%236366f1'/%3E%3Cstop offset='1' stop-color='%2306b6d4'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='16' fill='url(%23g)'/%3E%3Crect x='12' y='20' width='28' height='24' rx='6' fill='white'/%3E%3Cpath d='M42 28l10-6v20l-10-6z' fill='white'/%3E%3C/svg%3E" />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet" />
+
+  <!--
+    Agora RTC Web SDK (v4 "NG") from Agora's official release CDN.
+    If that CDN is unreachable (corporate firewall, ad-blocker, etc.) the onerror handler
+    loads the identical build from the npm mirror on jsDelivr instead.
+  -->
+  <script
+    src="https://download.agora.io/sdk/release/AgoraRTC_N-4.24.2.js"
+    onerror="(function(){var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/agora-rtc-sdk-ng@4.24.2/AgoraRTC_N-production.js';s.onload=function(){window.dispatchEvent(new Event('agora-sdk-ready'))};s.onerror=function(){window.dispatchEvent(new Event('agora-sdk-failed'))};document.head.appendChild(s);})()"
+  ></script>
+
+  <style>
+    /* =====================================================================
+       1. DESIGN TOKENS
+       ===================================================================== */
+    :root {
+      --bg: #0f172a;            /* page background (slate-900) */
+      --bg-elev: #1e293b;       /* cards, tiles (slate-800) */
+      --bg-elev-2: #273449;     /* hover / inputs */
+      --border: rgba(148, 163, 184, 0.16);
+      --border-strong: rgba(148, 163, 184, 0.32);
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+
+      --accent: #6366f1;        /* Meet It brand: electric indigo */
+      --accent-2: #06b6d4;      /* secondary: cyan */
+      --accent-hover: #818cf8;
+      --accent-glow: rgba(99, 102, 241, 0.45);
+      --brand-gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 45%, #06b6d4 100%);
+
+      --danger: #ef4444;
+      --danger-hover: #dc2626;
+      --success: #22c55e;
+      --warning: #f59e0b;
+
+      --radius-sm: 10px;
+      --radius: 16px;
+      --radius-lg: 24px;
+      --shadow: 0 10px 30px rgba(2, 6, 23, 0.45);
+      --shadow-lg: 0 24px 60px rgba(2, 6, 23, 0.6);
+      --ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+      --header-h: 64px;
+      --controls-h: 88px;
+      --grid-gap: 12px;
+
+      font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      color-scheme: dark;
+    }
+
+    /* =====================================================================
+       2. RESET & BASE
+       ===================================================================== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-size: 16px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+    button, input { font: inherit; color: inherit; }
+    button { cursor: pointer; border: none; background: none; }
+    button:disabled { cursor: not-allowed; opacity: 0.6; }
+    svg { display: block; flex-shrink: 0; }
+    :focus-visible { outline: 2px solid var(--accent-hover); outline-offset: 2px; }
+    .sr-only {
+      position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+      overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+    }
+    [hidden] { display: none !important; }
+
+    /* =====================================================================
+       3. SHARED COMPONENTS — buttons, inputs, spinner
+       ===================================================================== */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+      height: 52px; padding: 0 22px; border-radius: 14px;
+      font-weight: 600; font-size: 15px; letter-spacing: 0.01em;
+      transition: transform 0.18s var(--ease), background-color 0.2s, box-shadow 0.25s var(--ease), border-color 0.2s, opacity 0.2s;
+      user-select: none; white-space: nowrap;
+    }
+    .btn:not(:disabled):active { transform: scale(0.97); }
+    .btn-primary {
+      background: var(--brand-gradient); color: #fff;
+      box-shadow: 0 8px 24px var(--accent-glow);
+    }
+    .btn-primary:not(:disabled):hover { transform: translateY(-2px); box-shadow: 0 14px 34px var(--accent-glow); }
+    .btn-secondary {
+      background: var(--bg-elev-2); color: var(--text);
+      border: 1px solid var(--border-strong);
+    }
+    .btn-secondary:not(:disabled):hover { background: #31415a; border-color: var(--accent); transform: translateY(-1px); }
+    .btn-ghost { height: 40px; padding: 0 14px; border-radius: 10px; color: var(--text-muted); font-weight: 500; font-size: 14px; }
+    .btn-ghost:hover { background: rgba(148, 163, 184, 0.1); color: var(--text); }
+    .btn-block { width: 100%; }
+
+    .field { display: flex; flex-direction: column; gap: 8px; }
+    .field label { font-size: 13px; font-weight: 600; color: var(--text-muted); letter-spacing: 0.02em; }
+    .input {
+      height: 52px; width: 100%; padding: 0 16px; border-radius: 14px;
+      background: rgba(15, 23, 42, 0.7); border: 1px solid var(--border-strong);
+      font-size: 16px; outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s;
+    }
+    .input::placeholder { color: var(--text-dim); }
+    .input:hover { border-color: rgba(148, 163, 184, 0.5); }
+    .input:focus { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.22); background: rgba(15, 23, 42, 0.95); }
+    .input.invalid { border-color: var(--danger); box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.18); }
+    .input-code { font-family: 'Space Grotesk', 'Inter', monospace; font-size: 20px; letter-spacing: 0.3em; text-align: center; }
+    .input-code::placeholder { letter-spacing: 0.3em; }
+    .field-error { font-size: 13px; color: #fca5a5; min-height: 0; }
+
+    .spinner {
+      width: 18px; height: 18px; border-radius: 50%;
+      border: 2.5px solid rgba(255, 255, 255, 0.35); border-top-color: #fff;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* =====================================================================
+       4. BRAND LOGO
+       ===================================================================== */
+    .logo { display: inline-flex; align-items: center; gap: 14px; text-decoration: none; color: inherit; }
+    .logo-mark {
+      position: relative; width: 56px; height: 56px; border-radius: 16px;
+      background: var(--brand-gradient);
+      display: grid; place-items: center;
+      box-shadow: 0 10px 30px var(--accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+    }
+    .logo-mark::after {
+      /* subtle "signal" pulse ring for a high-tech feel */
+      content: ''; position: absolute; inset: -6px; border-radius: 20px;
+      border: 1.5px solid rgba(129, 140, 248, 0.5);
+      animation: pulse-ring 2.8s var(--ease) infinite;
+    }
+    @keyframes pulse-ring {
+      0% { opacity: 0.9; transform: scale(0.92); }
+      70% { opacity: 0; transform: scale(1.15); }
+      100% { opacity: 0; transform: scale(1.15); }
+    }
+    .logo-text {
+      font-family: 'Space Grotesk', 'Inter', sans-serif; font-weight: 700;
+      font-size: 40px; letter-spacing: -0.03em; line-height: 1;
+    }
+    .logo-text .it {
+      background: var(--brand-gradient); -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .logo-sm .logo-mark { width: 36px; height: 36px; border-radius: 11px; }
+    .logo-sm .logo-mark::after { display: none; }
+    .logo-sm .logo-mark svg { width: 20px; height: 20px; }
+    .logo-sm .logo-text { font-size: 22px; }
+
+    /* =====================================================================
+       5. LOBBY / WELCOME SCREEN
+       ===================================================================== */
+    .screen { min-height: 100vh; min-height: 100dvh; }
+    #lobby {
+      position: relative; display: flex; flex-direction: column;
+      overflow: hidden; isolation: isolate;
+    }
+    /* Animated ambient background */
+    #lobby::before, #lobby::after {
+      content: ''; position: absolute; z-index: -1; border-radius: 50%; filter: blur(90px); opacity: 0.55;
+      animation: float 18s ease-in-out infinite alternate;
+    }
+    #lobby::before { width: 520px; height: 520px; background: #4f46e5; top: -160px; left: -140px; }
+    #lobby::after { width: 460px; height: 460px; background: #0891b2; bottom: -180px; right: -120px; animation-delay: -6s; opacity: 0.4; }
+    @keyframes float { from { transform: translate(0, 0) scale(1); } to { transform: translate(60px, 40px) scale(1.12); } }
+    .grid-bg {
+      position: absolute; inset: 0; z-index: -1; pointer-events: none;
+      background-image:
+        linear-gradient(rgba(148, 163, 184, 0.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(148, 163, 184, 0.06) 1px, transparent 1px);
+      background-size: 44px 44px;
+      mask-image: radial-gradient(ellipse at center, #000 30%, transparent 75%);
+      -webkit-mask-image: radial-gradient(ellipse at center, #000 30%, transparent 75%);
+    }
+
+    .lobby-topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 20px clamp(16px, 4vw, 48px);
+    }
+    .status-pill {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 6px 12px; border-radius: 999px; font-size: 12.5px; font-weight: 600;
+      background: rgba(30, 41, 59, 0.7); border: 1px solid var(--border); color: var(--text-muted);
+      backdrop-filter: blur(8px);
+    }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-dim); }
+    .status-pill.ok .status-dot { background: var(--success); box-shadow: 0 0 10px var(--success); }
+    .status-pill.warn .status-dot { background: var(--warning); box-shadow: 0 0 10px var(--warning); }
+    .status-pill.err .status-dot { background: var(--danger); box-shadow: 0 0 10px var(--danger); }
+
+    .lobby-main {
+      flex: 1; width: 100%; max-width: 1180px; margin: 0 auto;
+      display: grid; grid-template-columns: 1.1fr 1fr; align-items: center; gap: clamp(32px, 6vw, 80px);
+      padding: 24px clamp(16px, 4vw, 48px) 48px;
+    }
+    .hero .logo { margin-bottom: 32px; }
+    .hero .logo-mark { width: 72px; height: 72px; border-radius: 20px; }
+    .hero .logo-mark svg { width: 40px; height: 40px; }
+    .hero .logo-mark::after { border-radius: 26px; }
+    .hero .logo-text { font-size: clamp(44px, 6vw, 64px); }
+    .hero h1 {
+      font-size: clamp(30px, 4.2vw, 48px); line-height: 1.12; font-weight: 800; letter-spacing: -0.03em;
+      margin-bottom: 18px;
+    }
+    .hero h1 .grad { background: var(--brand-gradient); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .hero p.lead { color: var(--text-muted); font-size: clamp(16px, 1.6vw, 18px); max-width: 520px; margin-bottom: 28px; }
+    .feature-list { list-style: none; display: flex; flex-wrap: wrap; gap: 10px; }
+    .feature-list li {
+      display: inline-flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 500; color: #cbd5e1;
+      padding: 8px 14px; border-radius: 999px; background: rgba(30, 41, 59, 0.6); border: 1px solid var(--border);
+    }
+    .feature-list svg { color: var(--accent-2); }
+
+    .lobby-card {
+      background: rgba(30, 41, 59, 0.72); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: clamp(22px, 3vw, 34px);
+      box-shadow: var(--shadow-lg); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+      display: flex; flex-direction: column; gap: 22px;
+      animation: rise 0.6s var(--ease) both;
+    }
+    @keyframes rise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+    .lobby-card h2 { font-size: 20px; font-weight: 700; letter-spacing: -0.01em; }
+    .lobby-card .sub { color: var(--text-muted); font-size: 14px; margin-top: 4px; }
+    .divider {
+      display: flex; align-items: center; gap: 14px; color: var(--text-dim);
+      font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em;
+    }
+    .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border-strong); }
+    .join-row { display: grid; grid-template-columns: 1fr auto; gap: 10px; }
+
+    .settings { border-top: 1px solid var(--border); padding-top: 16px; }
+    .settings summary {
+      list-style: none; cursor: pointer; display: flex; align-items: center; gap: 8px;
+      font-size: 13px; font-weight: 600; color: var(--text-muted); transition: color 0.2s;
+    }
+    .settings summary::-webkit-details-marker { display: none; }
+    .settings summary:hover { color: var(--text); }
+    .settings summary .chev { transition: transform 0.25s var(--ease); }
+    .settings[open] summary .chev { transform: rotate(90deg); }
+    .settings-body { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
+    .settings-body .hint { font-size: 12.5px; color: var(--text-dim); }
+    .settings-body .hint a { color: var(--accent-hover); }
+    .settings-row { display: grid; grid-template-columns: 1fr auto; gap: 10px; }
+    .settings-row .input { height: 44px; font-size: 14px; font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace; }
+    .settings-row .btn { height: 44px; }
+
+    .lobby-footer { text-align: center; color: var(--text-dim); font-size: 12.5px; padding: 0 16px 20px; }
+
+    /* =====================================================================
+       6. CALL SCREEN — header, grid, tiles, control bar
+       ===================================================================== */
+    #call {
+      height: 100vh; height: 100dvh;
+      display: flex; flex-direction: column;
+      background: radial-gradient(1200px 600px at 50% -10%, rgba(99, 102, 241, 0.12), transparent 60%), var(--bg);
+    }
+    .call-header {
+      height: var(--header-h); flex-shrink: 0;
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      padding: 0 clamp(12px, 2.5vw, 24px);
+      border-bottom: 1px solid var(--border);
+      background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(12px);
+    }
+    .call-header .left, .call-header .right { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .meeting-meta { display: flex; align-items: center; gap: 10px; }
+    .code-chip {
+      display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 12px;
+      border-radius: 10px; background: var(--bg-elev); border: 1px solid var(--border);
+      font-family: 'Space Grotesk', 'Inter', monospace; font-weight: 600; font-size: 15px; letter-spacing: 0.08em;
+      transition: border-color 0.2s, background-color 0.2s, transform 0.15s;
+    }
+    .code-chip:hover { border-color: var(--accent); background: var(--bg-elev-2); }
+    .code-chip:active { transform: scale(0.97); }
+    .code-chip .label { font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 500; letter-spacing: 0; color: var(--text-muted); }
+    .code-chip svg { color: var(--text-muted); }
+    .meta-chip {
+      display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 12px; border-radius: 10px;
+      background: var(--bg-elev); border: 1px solid var(--border); font-size: 13.5px; font-weight: 600; color: #cbd5e1;
+      font-variant-numeric: tabular-nums;
+    }
+    .rec-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); box-shadow: 0 0 8px var(--success); }
+    .role-badge {
+      font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+      padding: 3px 8px; border-radius: 6px; background: rgba(99, 102, 241, 0.2); color: #c7d2fe; border: 1px solid rgba(99, 102, 241, 0.4);
+    }
+
+    .stage { flex: 1; min-height: 0; position: relative; display: flex; }
+    .video-grid {
+      flex: 1; min-height: 0;
+      display: grid; gap: var(--grid-gap); padding: var(--grid-gap);
+      /* JS sets --cols / --rows from the participant count and the available space */
+      grid-template-columns: repeat(var(--cols, 1), minmax(0, 1fr));
+      grid-template-rows: repeat(var(--rows, 1), minmax(0, 1fr));
+      align-content: center; justify-content: center;
+      transition: grid-template-columns 0.3s var(--ease);
+    }
+    /* A lone participant gets a centred, size-capped tile instead of an edge-to-edge one */
+    .video-grid[data-count="1"] { padding: clamp(12px, 3vw, 36px); }
+    .video-grid[data-count="1"] .tile { max-width: 1100px; width: 100%; justify-self: center; }
+    /* Many participants: allow scrolling instead of shrinking tiles to nothing */
+    .video-grid.scroll { overflow-y: auto; grid-template-rows: none; grid-auto-rows: minmax(150px, 1fr); align-content: start; }
+
+    .tile {
+      position: relative; overflow: hidden; min-height: 0; min-width: 0;
+      border-radius: var(--radius); background: var(--bg-elev);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      animation: tile-in 0.35s var(--ease) both;
+      transition: box-shadow 0.25s var(--ease), border-color 0.25s;
+    }
+    @keyframes tile-in { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: none; } }
+    .tile.leaving { animation: tile-out 0.25s var(--ease) forwards; }
+    @keyframes tile-out { to { opacity: 0; transform: scale(0.94); } }
+    .tile.speaking { border-color: var(--accent-2); box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.55), var(--shadow); }
+
+    .tile .player { position: absolute; inset: 0; z-index: 1; background: #000; }
+    .tile .player:empty { display: none; }
+    /* Agora injects its own <div><video/></div>; force our fit mode over its inline styles */
+    .tile .player video { object-fit: cover !important; }
+    .tile.fit-contain .player video { object-fit: contain !important; }
+
+    .tile .avatar-wrap {
+      position: absolute; inset: 0; display: grid; place-items: center;
+      background: radial-gradient(circle at 50% 40%, #2b3a55 0%, var(--bg-elev) 70%);
+    }
+    .avatar {
+      width: clamp(56px, 22%, 120px); aspect-ratio: 1; border-radius: 50%;
+      display: grid; place-items: center;
+      font-family: 'Space Grotesk', 'Inter', sans-serif; font-weight: 700; color: #fff;
+      font-size: clamp(20px, 3.2vw, 44px);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+      transition: box-shadow 0.25s;
+    }
+    .tile.speaking .avatar { box-shadow: 0 0 0 4px rgba(6, 182, 212, 0.6), 0 10px 30px rgba(0, 0, 0, 0.35); }
+
+    .name-tag {
+      position: absolute; z-index: 2; left: 10px; bottom: 10px; max-width: calc(100% - 20px);
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 6px 10px; border-radius: 10px;
+      background: rgba(15, 23, 42, 0.72); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      font-size: 13px; font-weight: 600;
+    }
+    .name-tag .name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .name-tag .mic-state { color: var(--text-muted); }
+    .name-tag .mic-state.off { color: #fca5a5; }
+    .name-tag .tag-badge {
+      font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+      padding: 2px 6px; border-radius: 5px; background: var(--accent); color: #fff;
+    }
+    .tile .net-badge {
+      position: absolute; z-index: 2; top: 10px; right: 10px;
+      padding: 4px 8px; border-radius: 8px; font-size: 11px; font-weight: 600;
+      background: rgba(15, 23, 42, 0.72); color: var(--text-muted);
+    }
+    .tile .connecting {
+      position: absolute; z-index: 2; top: 10px; left: 10px;
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 8px; border-radius: 8px; font-size: 11px; font-weight: 600;
+      background: rgba(15, 23, 42, 0.72); color: var(--text-muted);
+    }
+    .tile .connecting .spinner { width: 12px; height: 12px; border-width: 2px; }
+
+    /* Control bar */
+    .control-bar {
+      flex-shrink: 0; min-height: var(--controls-h);
+      display: flex; align-items: center; justify-content: center; gap: clamp(10px, 2vw, 16px);
+      padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+      background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(12px);
+      border-top: 1px solid var(--border);
+    }
+    .ctrl {
+      position: relative; width: 56px; height: 56px; border-radius: 50%;
+      display: grid; place-items: center;
+      background: var(--bg-elev-2); color: var(--text); border: 1px solid var(--border-strong);
+      transition: background-color 0.2s, transform 0.18s var(--ease), box-shadow 0.25s var(--ease), border-color 0.2s;
+    }
+    .ctrl:not(:disabled):hover { background: #34445f; transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35); }
+    .ctrl:not(:disabled):active { transform: scale(0.94); }
+    .ctrl.off { background: var(--danger); border-color: var(--danger); color: #fff; }
+    .ctrl.off:not(:disabled):hover { background: var(--danger-hover); }
+    .ctrl.pending::after {
+      content: ''; position: absolute; inset: -4px; border-radius: 50%;
+      border: 2px solid transparent; border-top-color: var(--accent-hover); animation: spin 0.8s linear infinite;
+    }
+    .ctrl .ctrl-label {
+      position: absolute; bottom: calc(100% + 10px); left: 50%; transform: translate(-50%, 4px);
+      padding: 5px 9px; border-radius: 7px; background: #020617; color: #e2e8f0;
+      font-size: 12px; font-weight: 600; white-space: nowrap; pointer-events: none;
+      opacity: 0; transition: opacity 0.15s, transform 0.15s;
+    }
+    .ctrl:hover .ctrl-label, .ctrl:focus-visible .ctrl-label { opacity: 1; transform: translate(-50%, 0); }
+    .ctrl-leave {
+      height: 56px; padding: 0 24px; border-radius: 999px;
+      display: inline-flex; align-items: center; gap: 10px;
+      background: var(--danger); color: #fff; font-weight: 700; font-size: 15px;
+      box-shadow: 0 8px 24px rgba(239, 68, 68, 0.35);
+      transition: background-color 0.2s, transform 0.18s var(--ease), box-shadow 0.25s var(--ease);
+    }
+    .ctrl-leave:not(:disabled):hover { background: var(--danger-hover); transform: translateY(-2px); box-shadow: 0 12px 30px rgba(239, 68, 68, 0.45); }
+    .ctrl-leave:not(:disabled):active { transform: scale(0.96); }
+    .ctrl-sep { width: 1px; height: 32px; background: var(--border-strong); margin: 0 4px; }
+
+    /* =====================================================================
+       7. OVERLAYS — share modal, joining overlay, toasts
+       ===================================================================== */
+    .overlay {
+      position: fixed; inset: 0; z-index: 50;
+      display: grid; place-items: center; padding: 16px;
+      background: rgba(2, 6, 23, 0.66); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+      animation: fade 0.2s ease both;
+    }
+    @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+    .modal {
+      width: 100%; max-width: 440px;
+      background: var(--bg-elev); border: 1px solid var(--border-strong);
+      border-radius: var(--radius-lg); padding: 28px; box-shadow: var(--shadow-lg);
+      text-align: center; animation: rise 0.35s var(--ease) both;
+    }
+    .modal .badge-ok {
+      width: 56px; height: 56px; margin: 0 auto 14px; border-radius: 50%;
+      display: grid; place-items: center; background: rgba(34, 197, 94, 0.15); color: var(--success);
+    }
+    .modal h3 { font-size: 21px; font-weight: 700; margin-bottom: 6px; }
+    .modal p { color: var(--text-muted); font-size: 14.5px; }
+    .big-code {
+      margin: 22px 0 10px; padding: 18px 12px; border-radius: 16px;
+      background: rgba(15, 23, 42, 0.8); border: 1px dashed rgba(129, 140, 248, 0.6);
+      font-family: 'Space Grotesk', 'Inter', monospace; font-weight: 700;
+      font-size: clamp(34px, 9vw, 46px); letter-spacing: 0.18em;
+      background-image: var(--brand-gradient); -webkit-background-clip: text; background-clip: text; color: transparent;
+      user-select: all;
+    }
+    .big-code-wrap { background: rgba(15, 23, 42, 0.8); border-radius: 16px; }
+    .modal .invite-link {
+      font-size: 12.5px; color: var(--text-dim); word-break: break-all; margin-bottom: 20px;
+      font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+    }
+    .modal-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+    .modal-actions .btn { height: 48px; font-size: 14px; padding: 0 12px; }
+
+    .joining-card { display: flex; flex-direction: column; align-items: center; gap: 18px; text-align: center; }
+    .joining-card .ring {
+      width: 64px; height: 64px; border-radius: 50%;
+      border: 4px solid rgba(99, 102, 241, 0.25); border-top-color: var(--accent); border-right-color: var(--accent-2);
+      animation: spin 0.9s linear infinite;
+    }
+    .joining-card p { color: var(--text-muted); font-size: 15px; }
+    .joining-card strong { color: var(--text); font-family: 'Space Grotesk', monospace; letter-spacing: 0.1em; }
+
+    .toasts {
+      position: fixed; z-index: 100; top: 16px; left: 50%; transform: translateX(-50%);
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
+      width: min(92vw, 440px); pointer-events: none;
+    }
+    .toast {
+      pointer-events: auto; display: flex; align-items: flex-start; gap: 10px; width: 100%;
+      padding: 12px 14px; border-radius: 12px; font-size: 14px; font-weight: 500;
+      background: #1e293b; border: 1px solid var(--border-strong); box-shadow: var(--shadow);
+      animation: toast-in 0.3s var(--ease) both;
+    }
+    .toast.hide { animation: toast-out 0.25s ease forwards; }
+    .toast .t-icon { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; flex-shrink: 0; margin-top: 1px; }
+    .toast.info .t-icon { background: rgba(99, 102, 241, 0.25); color: #c7d2fe; }
+    .toast.success .t-icon { background: rgba(34, 197, 94, 0.2); color: #86efac; }
+    .toast.error .t-icon { background: rgba(239, 68, 68, 0.2); color: #fca5a5; }
+    .toast.warn .t-icon { background: rgba(245, 158, 11, 0.2); color: #fcd34d; }
+    .toast .t-msg { flex: 1; line-height: 1.4; }
+    .toast .t-action {
+      margin-left: 4px; padding: 3px 10px; border-radius: 8px; font-size: 13px; font-weight: 700;
+      background: var(--accent); color: #fff; align-self: center;
+    }
+    @keyframes toast-in { from { opacity: 0; transform: translateY(-10px) scale(0.98); } to { opacity: 1; transform: none; } }
+    @keyframes toast-out { to { opacity: 0; transform: translateY(-8px); } }
+
+    /* =====================================================================
+       8. RESPONSIVE BREAKPOINTS
+       ===================================================================== */
+    /* Tablets & small laptops */
+    @media (max-width: 960px) {
+      .lobby-main { grid-template-columns: 1fr; max-width: 560px; gap: 28px; padding-top: 8px; }
+      .hero { text-align: center; }
+      .hero .logo { margin-bottom: 22px; }
+      .hero p.lead { margin-left: auto; margin-right: auto; }
+      .feature-list { justify-content: center; }
+    }
+    /* Phones */
+    @media (max-width: 600px) {
+      :root { --header-h: 56px; --controls-h: 80px; --grid-gap: 8px; }
+      .lobby-topbar { padding: 14px 16px; }
+      .lobby-topbar .logo-sm { visibility: hidden; }
+      .hero .logo-mark { width: 60px; height: 60px; }
+      .hero .logo-mark svg { width: 32px; height: 32px; }
+      .hero h1 { font-size: 28px; }
+      .feature-list li { font-size: 12.5px; padding: 6px 11px; }
+      .lobby-card { border-radius: 20px; }
+      .join-row { grid-template-columns: 1fr; }
+
+      .call-header .logo-sm .logo-text { display: none; }
+      .code-chip .label, .meta-chip .meta-label, .role-badge { display: none; }
+      .code-chip, .meta-chip { height: 34px; padding: 0 10px; font-size: 13.5px; }
+      .ctrl { width: 52px; height: 52px; }
+      .ctrl-leave { height: 52px; padding: 0 18px; }
+      .ctrl-leave .leave-text { display: none; }
+      .ctrl .ctrl-label { display: none; }
+      .ctrl-sep { display: none; }
+      .tile { border-radius: 12px; }
+      .name-tag { left: 6px; bottom: 6px; padding: 4px 8px; font-size: 12px; }
+      .modal { padding: 22px 18px; }
+      .modal-actions { grid-template-columns: 1fr; }
+    }
+    /* Very small phones */
+    @media (max-width: 360px) {
+      .logo-text { font-size: 34px; }
+      .control-bar { gap: 8px; }
+      .ctrl { width: 48px; height: 48px; }
+    }
+    /* Landscape phones: reclaim vertical space */
+    @media (max-height: 500px) and (orientation: landscape) {
+      :root { --header-h: 48px; --controls-h: 64px; }
+      .ctrl, .ctrl-leave { height: 46px; }
+      .ctrl { width: 46px; }
+    }
+    /* Large desktop monitors */
+    @media (min-width: 1600px) {
+      :root { --grid-gap: 16px; }
+      .lobby-main { max-width: 1320px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- =======================================================================
+       SVG ICON SPRITE (referenced with <use href="#i-...">)
+       ======================================================================= -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="i-cam" viewBox="0 0 24 24"><path fill="currentColor" d="M4 6.5A2.5 2.5 0 0 1 6.5 4h7A2.5 2.5 0 0 1 16 6.5v.88l3.38-2.03A1.1 1.1 0 0 1 21 6.3v11.4a1.1 1.1 0 0 1-1.62.95L16 16.62v.88A2.5 2.5 0 0 1 13.5 20h-7A2.5 2.5 0 0 1 4 17.5v-11Z" transform="translate(-1 0)"/></symbol>
+    <symbol id="i-cam-off" viewBox="0 0 24 24"><path fill="currentColor" d="M2.3 3.7a1 1 0 0 1 1.4-1.4l18 18a1 1 0 0 1-1.4 1.4l-3.08-3.08A2.5 2.5 0 0 1 12.5 20h-7A2.5 2.5 0 0 1 3 17.5v-11c0-.5.15-.97.4-1.37L2.3 3.7ZM15 11.87V6.5A2.5 2.5 0 0 0 12.5 4H7.13L15 11.87Zm5.38-6.52L17 7.38v6.49l2.38 2.38.62.4a1.1 1.1 0 0 0 1-1.1V6.3a1.1 1.1 0 0 0-1.62-.95Z"/></symbol>
+    <symbol id="i-mic" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a3.5 3.5 0 0 0-3.5 3.5v6a3.5 3.5 0 0 0 7 0v-6A3.5 3.5 0 0 0 12 2Zm-6 9a1 1 0 0 1 1 1 5 5 0 0 0 10 0 1 1 0 1 1 2 0 7 7 0 0 1-6 6.93V21h2.5a1 1 0 1 1 0 2h-7a1 1 0 1 1 0-2H11v-2.07A7 7 0 0 1 5 12a1 1 0 0 1 1-1Z"/></symbol>
+    <symbol id="i-mic-off" viewBox="0 0 24 24"><path fill="currentColor" d="M3.7 2.3a1 1 0 0 0-1.4 1.4l6.2 6.2v1.6a3.5 3.5 0 0 0 5.27 3.02l1.48 1.48A5 5 0 0 1 7 12a1 1 0 1 0-2 0 7 7 0 0 0 6 6.93V21H8.5a1 1 0 1 0 0 2h7a1 1 0 1 0 0-2H13v-2.07a6.96 6.96 0 0 0 3.7-1.68l3.6 3.6a1 1 0 0 0 1.4-1.41L3.7 2.3ZM15.5 5.5v5.88L8.73 4.6A3.5 3.5 0 0 1 15.5 5.5Zm2.06 7.94 1.57 1.57A6.97 6.97 0 0 0 19 12a1 1 0 1 0-2 0c0 .5-.08.98-.22 1.44h.78Z"/></symbol>
+    <symbol id="i-phone" viewBox="0 0 24 24"><path fill="currentColor" d="M12 8.5c-3.64 0-7.06.95-9.4 2.57A2.3 2.3 0 0 0 1.6 13v1.86c0 .96.86 1.69 1.8 1.54l3.37-.53a1.6 1.6 0 0 0 1.35-1.58v-1.6c1.18-.4 2.5-.6 3.88-.6s2.7.2 3.88.6v1.6c0 .79.57 1.46 1.35 1.58l3.37.53c.94.15 1.8-.58 1.8-1.54V13a2.3 2.3 0 0 0-1-1.93C19.06 9.45 15.64 8.5 12 8.5Z"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><path fill="currentColor" d="M8 3a2 2 0 0 0-2 2v1H5a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2v-1h1a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2H8Zm8 15V8a2 2 0 0 0-2-2H8V5h9v11h-1v2ZM5 8h9v11H5V8Z"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24"><path fill="currentColor" d="M10.6 13.4a1 1 0 0 1 0-1.4l.01-.01a1 1 0 0 1 1.41 0 3 3 0 0 0 4.24 0l3.18-3.18a3 3 0 0 0-4.24-4.24l-1.06 1.06a1 1 0 1 1-1.42-1.41l1.07-1.07a5 5 0 0 1 7.07 7.07l-3.18 3.18a5 5 0 0 1-7.07 0Zm2.8-2.8a1 1 0 0 1 0 1.4 1 1 0 0 1-1.41 0 3 3 0 0 0-4.24 0l-3.18 3.18a3 3 0 0 0 4.24 4.24l1.06-1.06a1 1 0 0 1 1.42 1.41l-1.07 1.07a5 5 0 0 1-7.07-7.07l3.18-3.18a5 5 0 0 1 7.07 0Z"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24"><path fill="currentColor" d="M9 4a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm7.5 1a3 3 0 1 0 0 6 3 3 0 0 0 0-6ZM2 18.5C2 15.46 5.13 13.5 9 13.5s7 1.96 7 5V20H2v-1.5Zm15.94 1.5H22v-1.2c0-2.3-2.22-3.85-5.06-4.24 1.22.95 1.98 2.21 1.98 3.68 0 .62-.33 1.26-.98 1.76Z"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path fill="currentColor" d="M12 4a1 1 0 0 1 1 1v6h6a1 1 0 1 1 0 2h-6v6a1 1 0 1 1-2 0v-6H5a1 1 0 1 1 0-2h6V5a1 1 0 0 1 1-1Z"/></symbol>
+    <symbol id="i-login" viewBox="0 0 24 24"><path fill="currentColor" d="M14 3h4a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3h-4a1 1 0 1 1 0-2h4a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1h-4a1 1 0 1 1 0-2Zm-3.7 3.3a1 1 0 0 1 1.4 0l5 5a1 1 0 0 1 0 1.4l-5 5a1 1 0 0 1-1.4-1.4l3.29-3.3H4a1 1 0 1 1 0-2h9.59L10.3 7.7a1 1 0 0 1 0-1.4Z"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path fill="currentColor" d="M20.7 6.3a1 1 0 0 1 0 1.4l-10 10a1 1 0 0 1-1.4 0l-5-5a1 1 0 1 1 1.4-1.4l4.3 4.29 9.3-9.3a1 1 0 0 1 1.4 0Z"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2 4 5v6c0 5 3.4 9.7 8 11 4.6-1.3 8-6 8-11V5l-8-3Zm-1 13.4-3.7-3.7 1.4-1.4 2.3 2.3 4.3-4.3 1.4 1.4L11 15.4Z"/></symbol>
+    <symbol id="i-bolt" viewBox="0 0 24 24"><path fill="currentColor" d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z"/></symbol>
+    <symbol id="i-device" viewBox="0 0 24 24"><path fill="currentColor" d="M3 5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-6v2h3a1 1 0 1 1 0 2H8a1 1 0 1 1 0-2h3v-2H5a2 2 0 0 1-2-2V5Z"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 24 24"><path fill="currentColor" d="M9.3 5.3a1 1 0 0 1 1.4 0l6 6a1 1 0 0 1 0 1.4l-6 6a1 1 0 0 1-1.4-1.4l5.29-5.3-5.3-5.3a1 1 0 0 1 0-1.4Z"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm1 15h-2v-6h2v6Zm0-8h-2V7h2v2Z"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path fill="currentColor" d="M6.3 6.3a1 1 0 0 1 1.4 0L12 10.6l4.3-4.3a1 1 0 1 1 1.4 1.4L13.4 12l4.3 4.3a1 1 0 0 1-1.4 1.4L12 13.4l-4.3 4.3a1 1 0 0 1-1.4-1.4l4.3-4.3-4.3-4.3a1 1 0 0 1 0-1.4Z"/></symbol>
+    <!-- Brand mark: camera + signal waves -->
+    <symbol id="i-brand" viewBox="0 0 40 40"><rect x="4" y="11" width="21" height="18" rx="5" fill="#fff"/><path d="M27 17.2 34.4 13a1 1 0 0 1 1.6.9v12.2a1 1 0 0 1-1.6.9L27 22.8z" fill="#fff"/><circle cx="14.5" cy="20" r="3.4" fill="#6366f1"/></symbol>
+  </svg>
+
+  <!-- =======================================================================
+       SCREEN 1 — WELCOME / LOBBY
+       ======================================================================= -->
+  <main id="lobby" class="screen" aria-labelledby="lobby-title">
+    <div class="grid-bg" aria-hidden="true"></div>
+
+    <header class="lobby-topbar">
+      <a class="logo logo-sm" href="./" aria-label="Meet It home">
+        <span class="logo-mark"><svg viewBox="0 0 40 40"><use href="#i-brand"/></svg></span>
+        <span class="logo-text">Meet <span class="it">It</span></span>
+      </a>
+      <span id="sdkStatus" class="status-pill" role="status" aria-live="polite">
+        <span class="status-dot"></span><span class="status-text">Loading video engine…</span>
+      </span>
+    </header>
+
+    <section class="lobby-main">
+      <!-- Brand hero -->
+      <div class="hero">
+        <div class="logo" aria-hidden="true">
+          <span class="logo-mark"><svg viewBox="0 0 40 40"><use href="#i-brand"/></svg></span>
+          <span class="logo-text">Meet <span class="it">It</span></span>
+        </div>
+        <h1 id="lobby-title">Face-to-face meetings,<br /><span class="grad">one code away.</span></h1>
+        <p class="lead">Start an HD video meeting in a single click, share the 6-digit code, and your friends are in. No downloads, no sign-ups.</p>
+        <ul class="feature-list">
+          <li><svg width="16" height="16"><use href="#i-bolt"/></svg>Instant rooms</li>
+          <li><svg width="16" height="16"><use href="#i-shield"/></svg>Private codes</li>
+          <li><svg width="16" height="16"><use href="#i-device"/></svg>Works on any device</li>
+        </ul>
+      </div>
+
+      <!-- Join / create form -->
+      <div class="lobby-card">
+        <div>
+          <h2>Get started</h2>
+          <p class="sub">Enter your name, then create a meeting or join one.</p>
+        </div>
+
+        <div class="field">
+          <label for="displayName">Your name</label>
+          <input id="displayName" class="input" type="text" maxlength="32" autocomplete="name"
+                 placeholder="e.g. Alex Morgan" spellcheck="false" />
+          <span id="nameError" class="field-error" aria-live="polite"></span>
+        </div>
+
+        <button id="createBtn" class="btn btn-primary btn-block" type="button">
+          <svg width="20" height="20"><use href="#i-plus"/></svg>
+          <span class="btn-text">Create a New Meeting</span>
+        </button>
+
+        <div class="divider">or join with a code</div>
+
+        <div class="field">
+          <label for="meetingCode">Meeting code</label>
+          <div class="join-row">
+            <input id="meetingCode" class="input input-code" type="text" inputmode="numeric"
+                   autocomplete="off" maxlength="7" placeholder="000 000" aria-describedby="codeError" />
+            <button id="joinBtn" class="btn btn-secondary" type="button">
+              <svg width="20" height="20"><use href="#i-login"/></svg>
+              <span class="btn-text">Join Meeting</span>
+            </button>
+          </div>
+          <span id="codeError" class="field-error" aria-live="polite"></span>
+        </div>
+
+        <!-- Runtime App ID settings (only shown when no App ID is hard-coded below) -->
+        <details id="settingsPanel" class="settings" hidden>
+          <summary>
+            <svg class="chev" width="14" height="14"><use href="#i-chev"/></svg>
+            Connection settings
+            <span id="appIdState" class="role-badge" style="margin-left:auto">Not set</span>
+          </summary>
+          <div class="settings-body">
+            <label class="sr-only" for="appIdInput">Agora App ID</label>
+            <div class="settings-row">
+              <input id="appIdInput" class="input" type="text" placeholder="Paste your Agora App ID" spellcheck="false" autocomplete="off" />
+              <button id="saveAppIdBtn" class="btn btn-secondary" type="button">Save</button>
+            </div>
+            <p class="hint">
+              Meet It runs on Agora. Create a free project at
+              <a href="https://console.agora.io" target="_blank" rel="noopener">console.agora.io</a>
+              using <b>Testing mode (App ID only)</b>, then paste its App ID here. It is stored only in this browser
+              and is included in invite links so your friends connect automatically.
+            </p>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <footer class="lobby-footer">© <span id="year"></span> Meet It · Camera and microphone access is requested only when you join.</footer>
+  </main>
+
+  <!-- =======================================================================
+       SCREEN 2 — ACTIVE CALL
+       ======================================================================= -->
+  <div id="call" class="screen" hidden>
+    <header class="call-header">
+      <div class="left">
+        <div class="logo logo-sm">
+          <span class="logo-mark"><svg viewBox="0 0 40 40"><use href="#i-brand"/></svg></span>
+          <span class="logo-text">Meet <span class="it">It</span></span>
+        </div>
+        <span id="roleBadge" class="role-badge">Host</span>
+      </div>
+      <div class="right meeting-meta">
+        <button id="codeChip" class="code-chip" type="button" title="Copy meeting code">
+          <span class="label">Code</span>
+          <span id="codeChipValue">000 000</span>
+          <svg width="16" height="16"><use href="#i-copy"/></svg>
+        </button>
+        <span class="meta-chip" title="Participants">
+          <svg width="16" height="16"><use href="#i-users"/></svg>
+          <span id="participantCount">1</span><span class="meta-label">&nbsp;in call</span>
+        </span>
+        <span class="meta-chip" title="Meeting duration">
+          <span class="rec-dot" aria-hidden="true"></span>
+          <span id="callTimer">00:00</span>
+        </span>
+      </div>
+    </header>
+
+    <section class="stage" aria-label="Participants">
+      <div id="videoGrid" class="video-grid" data-count="0"></div>
+    </section>
+
+    <nav class="control-bar" aria-label="Call controls">
+      <button id="micBtn" class="ctrl" type="button" aria-pressed="true" aria-label="Mute microphone">
+        <svg width="24" height="24"><use href="#i-mic"/></svg>
+        <span class="ctrl-label">Mute (Ctrl+D)</span>
+      </button>
+      <button id="camBtn" class="ctrl" type="button" aria-pressed="true" aria-label="Turn camera off">
+        <svg width="24" height="24"><use href="#i-cam"/></svg>
+        <span class="ctrl-label">Stop video (Ctrl+E)</span>
+      </button>
+      <button id="inviteBtn" class="ctrl" type="button" aria-label="Copy invite link">
+        <svg width="22" height="22"><use href="#i-link"/></svg>
+        <span class="ctrl-label">Copy invite link</span>
+      </button>
+      <span class="ctrl-sep" aria-hidden="true"></span>
+      <button id="leaveBtn" class="ctrl-leave" type="button" aria-label="Leave meeting">
+        <svg width="24" height="24"><use href="#i-phone"/></svg>
+        <span class="leave-text">Leave Meeting</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- Meeting-created share dialog -->
+  <div id="shareModal" class="overlay" role="dialog" aria-modal="true" aria-labelledby="shareTitle" hidden>
+    <div class="modal">
+      <div class="badge-ok"><svg width="28" height="28"><use href="#i-check"/></svg></div>
+      <h3 id="shareTitle">Your meeting is live</h3>
+      <p>Share this code with your friends. They enter it on Meet It to join you.</p>
+      <div class="big-code-wrap"><div id="shareCode" class="big-code">000 000</div></div>
+      <p id="shareLink" class="invite-link"></p>
+      <div class="modal-actions">
+        <button id="copyCodeBtn" class="btn btn-secondary" type="button">
+          <svg width="18" height="18"><use href="#i-copy"/></svg>Copy code
+        </button>
+        <button id="copyLinkBtn" class="btn btn-secondary" type="button">
+          <svg width="18" height="18"><use href="#i-link"/></svg>Copy invite link
+        </button>
+      </div>
+      <button id="closeShareBtn" class="btn btn-primary btn-block" type="button">Got it — take me in</button>
+    </div>
+  </div>
+
+  <!-- Connecting overlay -->
+  <div id="joiningOverlay" class="overlay" role="alertdialog" aria-live="assertive" hidden>
+    <div class="joining-card">
+      <div class="ring" aria-hidden="true"></div>
+      <p id="joiningText">Connecting to meeting <strong>000 000</strong>…</p>
+    </div>
+  </div>
+
+  <!-- Toast notifications -->
+  <div id="toasts" class="toasts" aria-live="polite"></div>
+
+  <script>
+    'use strict';
+
+    /* =========================================================================
+       1. CONFIGURATION
+       ========================================================================= */
+
+    /**
+     * >>> PUT YOUR AGORA APP ID HERE <<<
+     *
+     * Agora does not offer a single shared/public App ID — every App ID belongs to an account.
+     * Getting one is free and takes about two minutes:
+     *   1. Sign up at https://console.agora.io
+     *   2. Create a project and choose "Testing mode: APP ID" (no App Certificate / token).
+     *   3. Copy the App ID and paste it between the quotes below, e.g.
+     *        const AGORA_APP_ID = "0123456789abcdef0123456789abcdef";
+     *
+     * If you leave this empty, Meet It shows a "Connection settings" box on the lobby where
+     * the App ID can be pasted at runtime (saved in localStorage and carried in invite links),
+     * so the app still works straight after deploying to Vercel.
+     */
+    const AGORA_APP_ID = ""; // <-- replace with your own App ID
+
+    /**
+     * Temporary token. Leave as null for "Testing mode" projects (App ID only).
+     * For projects with an App Certificate you must generate tokens on a server;
+     * a static token only works for the one channel it was generated for.
+     */
+    const AGORA_TOKEN = null;
+
+    /** Prefix for Agora channel names so Meet It rooms never collide with other apps. */
+    const CHANNEL_PREFIX = 'meetit-';
+    const CODE_LENGTH = 6;
+    const STORAGE_KEYS = { name: 'meetit.displayName', appId: 'meetit.appId' };
+
+    /* =========================================================================
+       2. APPLICATION STATE
+       ========================================================================= */
+
+    let AgoraSDK = null;          // window.AgoraRTC once the SDK has loaded
+    let client = null;            // the IAgoraRTCClient for the current meeting
+    let localAudioTrack = null;   // IMicrophoneAudioTrack
+    let localVideoTrack = null;   // ICameraVideoTrack
+    let remoteUsers = {};         // uid -> IAgoraRTCRemoteUser
+    let currentRoomId = null;     // 6-digit meeting code, e.g. "482913"
+    let userRole = null;          // 'host' (created the meeting) | 'participant' (joined with a code)
+    let displayName = '';         // our own display name
+    let localUid = null;          // our Agora user account (string uid)
+    let isMicOn = true;
+    let isCamOn = true;
+    let isJoining = false;
+    let isLeaving = false;
+    let callStartedAt = 0;
+    let timerInterval = null;
+    let gridObserver = null;
+
+    /** uid (string) -> { el, player, avatarWrap, micIcon, name } for every tile in the grid */
+    const tiles = new Map();
+    const LOCAL_TILE_ID = '__local__';
+
+    /* =========================================================================
+       3. DOM REFERENCES
+       ========================================================================= */
+
+    const $ = (id) => document.getElementById(id);
+    const ui = {
+      lobby: $('lobby'), call: $('call'),
+      sdkStatus: $('sdkStatus'),
+      nameInput: $('displayName'), nameError: $('nameError'),
+      codeInput: $('meetingCode'), codeError: $('codeError'),
+      createBtn: $('createBtn'), joinBtn: $('joinBtn'),
+      settingsPanel: $('settingsPanel'), appIdInput: $('appIdInput'), saveAppIdBtn: $('saveAppIdBtn'), appIdState: $('appIdState'),
+      grid: $('videoGrid'),
+      roleBadge: $('roleBadge'), codeChip: $('codeChip'), codeChipValue: $('codeChipValue'),
+      participantCount: $('participantCount'), callTimer: $('callTimer'),
+      micBtn: $('micBtn'), camBtn: $('camBtn'), inviteBtn: $('inviteBtn'), leaveBtn: $('leaveBtn'),
+      shareModal: $('shareModal'), shareCode: $('shareCode'), shareLink: $('shareLink'),
+      copyCodeBtn: $('copyCodeBtn'), copyLinkBtn: $('copyLinkBtn'), closeShareBtn: $('closeShareBtn'),
+      joiningOverlay: $('joiningOverlay'), joiningText: $('joiningText'),
+      toasts: $('toasts'),
+    };
+
+    /* =========================================================================
+       4. SMALL UTILITIES
+       ========================================================================= */
+
+    /** localStorage can throw (private mode, blocked storage) — never let that break the app. */
+    function storageGet(key) {
+      try { return window.localStorage.getItem(key); } catch (e) { return null; }
+    }
+    function storageSet(key, value) {
+      try { window.localStorage.setItem(key, value); } catch (e) { /* storage unavailable: ignore */ }
+    }
+
+    /** Escapes text for safe insertion into innerHTML. */
+    function escapeHtml(str) {
+      return String(str).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    /** "482913" -> "482 913" for readability. */
+    function formatCode(code) {
+      return code ? `${code.slice(0, 3)} ${code.slice(3)}` : '';
+    }
+
+    /** Strips everything but digits ("482-913" or "482 913" -> "482913"). */
+    function normalizeCode(raw) {
+      return String(raw || '').replace(/\D/g, '').slice(0, CODE_LENGTH);
+    }
+
+    function isValidCode(code) {
+      return new RegExp(`^\\d{${CODE_LENGTH}}$`).test(code);
+    }
+
+    /** An Agora App ID is a 32-character hex string. */
+    function isValidAppId(id) {
+      return /^[a-f0-9]{32}$/i.test(String(id || '').trim());
+    }
+
+    /**
+     * Generates a cryptographically secure, uniformly distributed 6-digit meeting code
+     * (100000–999999). Uses rejection sampling so no code is more likely than another.
+     */
+    function generateMeetingCode() {
+      const min = 100000;
+      const range = 900000; // 100000..999999 inclusive
+      const maxUnbiased = Math.floor(0x100000000 / range) * range;
+      const buf = new Uint32Array(1);
+      if (window.crypto && window.crypto.getRandomValues) {
+        do { window.crypto.getRandomValues(buf); } while (buf[0] >= maxUnbiased);
+        return String(min + (buf[0] % range));
+      }
+      // Extremely old browsers only — still produces a valid code.
+      return String(min + Math.floor(Math.random() * range));
+    }
+
+    /** Short random suffix that makes every uid unique, even for two people with the same name. */
+    function randomSuffix() {
+      const buf = new Uint32Array(1);
+      if (window.crypto && window.crypto.getRandomValues) window.crypto.getRandomValues(buf);
+      else buf[0] = Math.floor(Math.random() * 0xffffffff);
+      return buf[0].toString(36);
+    }
+
+    /**
+     * Agora only transports a uid per user, not a display name. We use Agora "string user accounts"
+     * and pack the role and the (URL-encoded) name into it: "H|Alex%20Morgan|k3j9x".
+     * Allowed uid characters include letters, digits, %, |, -, _, ., !, ~, ( and ), which
+     * encodeURIComponent output satisfies once ' and * are escaped too. Max length is 255 bytes.
+     */
+    function encodeUid(name, role) {
+      const enc = (str) => encodeURIComponent(str).replace(/'/g, '%27').replace(/\*/g, '%2A');
+      let encoded = enc(name);
+      // Array.from() splits by code point, so emoji / non-Latin names are never cut in half
+      if (encoded.length > 200) encoded = enc(Array.from(name).slice(0, 12).join(''));
+      return `${role === 'host' ? 'H' : 'P'}|${encoded}|${randomSuffix()}`;
+    }
+
+    /** Reverse of encodeUid(); tolerates numeric uids from other clients. */
+    function parseUid(uid) {
+      const parts = String(uid).split('|');
+      if (parts.length === 3) {
+        let name = parts[1];
+        try { name = decodeURIComponent(parts[1]); } catch (e) { /* keep raw value */ }
+        return { name: name || 'Guest', role: parts[0] === 'H' ? 'host' : 'participant' };
+      }
+      return { name: `Guest ${String(uid).slice(-4)}`, role: 'participant' };
+    }
+
+    function getInitials(name) {
+      const words = String(name).trim().split(/\s+/).filter(Boolean);
+      if (!words.length) return '?';
+      const first = Array.from(words[0])[0] || '';
+      const last = words.length > 1 ? (Array.from(words[words.length - 1])[0] || '') : '';
+      return (first + last).toUpperCase();
+    }
+
+    /** Deterministic avatar gradient per name so each person keeps "their" colour. */
+    function avatarGradient(seed) {
+      let hash = 0;
+      for (const ch of String(seed)) hash = (hash * 31 + ch.codePointAt(0)) >>> 0;
+      const hue = hash % 360;
+      return `linear-gradient(135deg, hsl(${hue} 72% 56%), hsl(${(hue + 40) % 360} 78% 46%))`;
+    }
+
+    function delay(ms) { return new Promise((r) => setTimeout(r, ms)); }
+
+    /* =========================================================================
+       5. UI FEEDBACK — toasts, busy states, screen switching
+       ========================================================================= */
+
+    const TOAST_ICONS = { info: 'i-info', success: 'i-check', error: 'i-x', warn: 'i-info' };
+
+    /**
+     * Shows a transient notification.
+     * @param {string} message
+     * @param {'info'|'success'|'error'|'warn'} type
+     * @param {{duration?: number, action?: {label: string, onClick: Function}}} opts
+     */
+    function showToast(message, type = 'info', opts = {}) {
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.setAttribute('role', type === 'error' ? 'alert' : 'status');
+      toast.innerHTML = `
+        <span class="t-icon"><svg width="12" height="12"><use href="#${TOAST_ICONS[type] || 'i-info'}"/></svg></span>
+        <span class="t-msg">${escapeHtml(message)}</span>`;
+      if (opts.action) {
+        const btn = document.createElement('button');
+        btn.className = 't-action';
+        btn.type = 'button';
+        btn.textContent = opts.action.label;
+        btn.addEventListener('click', () => { opts.action.onClick(); dismiss(); });
+        toast.appendChild(btn);
+      }
+      ui.toasts.appendChild(toast);
+      // Keep at most 4 toasts on screen
+      while (ui.toasts.children.length > 4) ui.toasts.firstElementChild.remove();
+
+      let removed = false;
+      function dismiss() {
+        if (removed) return;
+        removed = true;
+        toast.classList.add('hide');
+        setTimeout(() => toast.remove(), 260);
+      }
+      const duration = opts.duration ?? (type === 'error' ? 7000 : 3800);
+      if (duration > 0) setTimeout(dismiss, duration);
+      toast.addEventListener('click', (e) => { if (!e.target.closest('.t-action')) dismiss(); });
+      return dismiss;
+    }
+
+    function setSdkStatus(kind, text) {
+      ui.sdkStatus.className = `status-pill ${kind}`;
+      ui.sdkStatus.querySelector('.status-text').textContent = text;
+    }
+
+    /** Disables lobby buttons and shows a spinner on the one that was clicked. */
+    function setLobbyBusy(busy, activeBtn) {
+      [ui.createBtn, ui.joinBtn].forEach((btn) => {
+        btn.disabled = busy;
+        const svg = btn.querySelector('svg');
+        const existing = btn.querySelector('.spinner');
+        if (busy && btn === activeBtn && !existing) {
+          const sp = document.createElement('span');
+          sp.className = 'spinner';
+          if (svg) svg.style.display = 'none';
+          btn.prepend(sp);
+        }
+        if (!busy) {
+          if (existing) existing.remove();
+          if (svg) svg.style.display = '';
+        }
+      });
+    }
+
+    function showScreen(name) {
+      const inCall = name === 'call';
+      ui.lobby.hidden = inCall;
+      ui.call.hidden = !inCall;
+      document.title = inCall && currentRoomId ? `Meet It · ${formatCode(currentRoomId)}` : 'Meet It — Video Meetings';
+      if (inCall) layoutGrid();
+    }
+
+    function showJoiningOverlay(code) {
+      ui.joiningText.innerHTML = `Connecting to meeting <strong>${escapeHtml(formatCode(code))}</strong>…`;
+      ui.joiningOverlay.hidden = false;
+    }
+    function hideJoiningOverlay() { ui.joiningOverlay.hidden = true; }
+
+    function setFieldError(input, errorEl, message) {
+      input.classList.toggle('invalid', Boolean(message));
+      errorEl.textContent = message || '';
+      if (message) input.focus();
+    }
+
+    /* =========================================================================
+       6. APP ID RESOLUTION & INVITE LINKS
+       ========================================================================= */
+
+    /** Hard-coded constant wins; otherwise use the value saved from settings / an invite link. */
+    function getAppId() {
+      if (isValidAppId(AGORA_APP_ID)) return AGORA_APP_ID.trim();
+      const saved = storageGet(STORAGE_KEYS.appId);
+      return isValidAppId(saved) ? saved.trim() : '';
+    }
+
+    function refreshAppIdUi() {
+      if (isValidAppId(AGORA_APP_ID)) {
+        ui.settingsPanel.hidden = true; // nothing to configure
+        return;
+      }
+      ui.settingsPanel.hidden = false;
+      const id = getAppId();
+      ui.appIdInput.value = id;
+      ui.appIdState.textContent = id ? 'Configured' : 'Not set';
+      ui.appIdState.style.background = id ? 'rgba(34,197,94,0.18)' : 'rgba(245,158,11,0.18)';
+      ui.appIdState.style.borderColor = id ? 'rgba(34,197,94,0.45)' : 'rgba(245,158,11,0.45)';
+      ui.appIdState.style.color = id ? '#86efac' : '#fcd34d';
+    }
+
+    function saveAppId() {
+      const value = ui.appIdInput.value.trim();
+      if (!isValidAppId(value)) {
+        ui.appIdInput.classList.add('invalid');
+        showToast('That does not look like an Agora App ID (32 hexadecimal characters).', 'error');
+        return false;
+      }
+      ui.appIdInput.classList.remove('invalid');
+      storageSet(STORAGE_KEYS.appId, value);
+      refreshAppIdUi();
+      showToast('App ID saved. You are ready to meet!', 'success');
+      return true;
+    }
+
+    /** Link a friend can open to land on the lobby with the code pre-filled. */
+    function buildInviteLink(code) {
+      const url = new URL(window.location.href);
+      url.search = '';
+      url.hash = '';
+      url.searchParams.set('room', code);
+      // Only share the App ID in the link when it was configured at runtime (not hard-coded).
+      if (!isValidAppId(AGORA_APP_ID) && getAppId()) url.searchParams.set('appid', getAppId());
+      return url.toString();
+    }
+
+    async function copyToClipboard(text, successMessage) {
+      try {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+        } else {
+          // Fallback for non-secure contexts / older browsers
+          const ta = document.createElement('textarea');
+          ta.value = text;
+          ta.setAttribute('readonly', '');
+          ta.style.position = 'fixed';
+          ta.style.opacity = '0';
+          document.body.appendChild(ta);
+          ta.select();
+          const ok = document.execCommand('copy');
+          ta.remove();
+          if (!ok) throw new Error('execCommand copy failed');
+        }
+        showToast(successMessage || 'Copied to clipboard', 'success', { duration: 2200 });
+      } catch (err) {
+        console.warn('[Meet It] Clipboard error:', err);
+        showToast(`Copy failed — please copy manually: ${text}`, 'warn', { duration: 8000 });
+      }
+    }
+
+    /* =========================================================================
+       7. VIDEO GRID — tiles & dynamic layout
+       ========================================================================= */
+
+    /**
+     * Creates (or returns the existing) participant tile.
+     * Every tile contains: an avatar fallback, a .player container for the video, and a name tag.
+     */
+    function createTile(id, { name, role, isLocal = false }) {
+      if (tiles.has(id)) return tiles.get(id);
+
+      const el = document.createElement('div');
+      el.className = 'tile';
+      el.dataset.uid = id;
+      el.title = 'Double-click to toggle fill / fit';
+
+      const avatarWrap = document.createElement('div');
+      avatarWrap.className = 'avatar-wrap';
+      const avatar = document.createElement('div');
+      avatar.className = 'avatar';
+      avatar.style.background = avatarGradient(name);
+      avatar.textContent = getInitials(name);
+      avatarWrap.appendChild(avatar);
+
+      const player = document.createElement('div');
+      player.className = 'player';
+
+      const tag = document.createElement('div');
+      tag.className = 'name-tag';
+      tag.innerHTML = `
+        <span class="mic-state"><svg width="14" height="14"><use href="#i-mic"/></svg></span>
+        <span class="name"></span>`;
+      tag.querySelector('.name').textContent = isLocal ? `${name} (You)` : name;
+      if (role === 'host') {
+        const badge = document.createElement('span');
+        badge.className = 'tag-badge';
+        badge.textContent = 'Host';
+        tag.appendChild(badge);
+      }
+
+      el.append(avatarWrap, player, tag);
+
+      if (!isLocal) {
+        // Shown until the remote user's media arrives
+        const connecting = document.createElement('div');
+        connecting.className = 'connecting';
+        connecting.innerHTML = '<span class="spinner"></span>Connecting';
+        el.appendChild(connecting);
+      }
+
+      el.addEventListener('dblclick', () => el.classList.toggle('fit-contain'));
+
+      // Local tile always comes first in the grid
+      if (isLocal) ui.grid.prepend(el); else ui.grid.appendChild(el);
+
+      const entry = { el, player, avatarWrap, micIcon: tag.querySelector('.mic-state'), name };
+      tiles.set(id, entry);
+      // Remote users show as muted until their audio track actually arrives
+      if (!isLocal) setTileMicState(id, false);
+      updateParticipantCount();
+      layoutGrid();
+      return entry;
+    }
+
+    /** Removes a tile with a short exit animation, then re-flows the grid. */
+    function removeTile(id) {
+      const entry = tiles.get(id);
+      if (!entry) return;
+      tiles.delete(id);
+      entry.el.classList.add('leaving');
+      const finish = () => { entry.el.remove(); layoutGrid(); };
+      entry.el.addEventListener('animationend', finish, { once: true });
+      setTimeout(finish, 400); // fallback if animations are disabled
+      updateParticipantCount();
+    }
+
+    function clearConnecting(entry) {
+      const c = entry && entry.el.querySelector('.connecting');
+      if (c) c.remove();
+    }
+
+    function setTileMicState(id, on) {
+      const entry = tiles.get(id);
+      if (!entry) return;
+      entry.micIcon.classList.toggle('off', !on);
+      entry.micIcon.innerHTML = `<svg width="14" height="14"><use href="#${on ? 'i-mic' : 'i-mic-off'}"/></svg>`;
+      entry.micIcon.title = on ? 'Microphone on' : 'Muted';
+    }
+
+    /** Empties a tile's video container so the avatar fallback is visible again. */
+    function clearTileVideo(id) {
+      const entry = tiles.get(id);
+      if (entry) entry.player.innerHTML = '';
+    }
+
+    function updateParticipantCount() {
+      ui.participantCount.textContent = String(tiles.size);
+    }
+
+    /**
+     * Chooses the number of columns/rows that gives each tile the largest possible
+     * 16:9 area for the current participant count and available space.
+     * Handles 1, 2, 3 … N participants on any screen orientation.
+     */
+    function layoutGrid() {
+      const grid = ui.grid;
+      const count = grid.querySelectorAll('.tile:not(.leaving)').length;
+      grid.dataset.count = String(count);
+      if (!count || ui.call.hidden) return;
+
+      const styles = getComputedStyle(grid);
+      const gap = parseFloat(styles.columnGap) || 12;
+      const padX = parseFloat(styles.paddingLeft) + parseFloat(styles.paddingRight);
+      const padY = parseFloat(styles.paddingTop) + parseFloat(styles.paddingBottom);
+      const W = Math.max(grid.clientWidth - padX, 1);
+      const H = Math.max(grid.clientHeight - padY, 1);
+      const ASPECT = 16 / 9;
+
+      let best = { cols: 1, rows: count, area: 0 };
+      for (let cols = 1; cols <= count; cols++) {
+        const rows = Math.ceil(count / cols);
+        const cellW = (W - gap * (cols - 1)) / cols;
+        const cellH = (H - gap * (rows - 1)) / rows;
+        if (cellW <= 0 || cellH <= 0) continue;
+        // Area of the largest 16:9 rectangle that fits in the cell
+        const fitW = Math.min(cellW, cellH * ASPECT);
+        const area = fitW * (fitW / ASPECT);
+        if (area > best.area) best = { cols, rows, area };
+      }
+
+      // If tiles would become tiny (lots of people on a phone), switch to a scrollable grid.
+      const tileHeight = Math.sqrt(best.area / ASPECT);
+      const tooSmall = count > 4 && tileHeight < 110;
+      grid.classList.toggle('scroll', tooSmall);
+      grid.style.setProperty('--cols', tooSmall ? String(Math.max(1, Math.floor(W / 180))) : String(best.cols));
+      grid.style.setProperty('--rows', String(best.rows));
+    }
+
+    /* =========================================================================
+       8. LOCAL MEDIA
+       ========================================================================= */
+
+    /**
+     * Creates microphone and camera tracks independently so a missing/blocked camera
+     * does not prevent the user from joining with audio (and vice versa).
+     */
+    async function createLocalTracks() {
+      const result = { audio: null, video: null, errors: [] };
+      try {
+        result.audio = await AgoraSDK.createMicrophoneAudioTrack({ AEC: true, ANS: true, AGC: true });
+      } catch (err) {
+        console.warn('[Meet It] Microphone unavailable:', err);
+        result.errors.push(describeMediaError(err, 'microphone'));
+      }
+      try {
+        result.video = await AgoraSDK.createCameraVideoTrack({
+          encoderConfig: '720p_2',
+          optimizationMode: 'motion',
+        });
+      } catch (err) {
+        console.warn('[Meet It] Camera unavailable:', err);
+        result.errors.push(describeMediaError(err, 'camera'));
+      }
+      return result;
+    }
+
+    function describeMediaError(err, device) {
+      const msg = `${(err && err.code) || ''} ${(err && err.message) || ''}`;
+      if (/PERMISSION_DENIED|NotAllowed|Permission denied/i.test(msg)) return `${device} permission was denied`;
+      if (/NOT_FOUND|NotFound|DEVICE_NOT_FOUND|Requested device not found/i.test(msg)) return `no ${device} was found`;
+      if (/NotReadable|in use|Could not start/i.test(msg)) return `${device} is being used by another app`;
+      return `${device} could not be started`;
+    }
+
+    /** Hooks up "device unplugged" handling for a local track. */
+    function watchLocalTrack(track, kind) {
+      if (!track || typeof track.on !== 'function') return;
+      track.on('track-ended', () => {
+        showToast(`Your ${kind} was disconnected.`, 'warn');
+        if (kind === 'camera') { isCamOn = false; clearTileVideo(LOCAL_TILE_ID); }
+        else { isMicOn = false; setTileMicState(LOCAL_TILE_ID, false); }
+        updateControlButtons();
+      });
+    }
+
+    /* =========================================================================
+       9. JOIN MEETING
+       ========================================================================= */
+
+    /**
+     * Joins (or creates, for the host) the meeting identified by the 6-digit roomId.
+     *  1. Initialises the Agora client & event handlers
+     *  2. Joins the channel "meetit-<roomId>"
+     *  3. Creates local camera/microphone tracks and plays the local preview
+     *  4. Publishes the tracks so everyone else can see and hear us
+     */
+    async function joinMeeting(roomId, name) {
+      if (isJoining || client) return false;
+      if (!AgoraSDK) throw new Error('SDK_NOT_LOADED');
+
+      const appId = getAppId();
+      if (!appId) throw new Error('NO_APP_ID');
+
+      isJoining = true;
+      currentRoomId = roomId;
+      displayName = name;
+      remoteUsers = {};
+      showJoiningOverlay(roomId);
+
+      try {
+        // --- 1. Client + events -------------------------------------------------
+        client = AgoraSDK.createClient({ mode: 'rtc', codec: 'vp8' });
+        client.on('user-joined', handleUserJoined);
+        client.on('user-published', handleUserPublished);
+        client.on('user-unpublished', handleUserUnpublished);
+        client.on('user-left', handleUserLeft);
+        client.on('user-info-updated', handleUserInfoUpdated);
+        client.on('volume-indicator', handleVolumeIndicator);
+        client.on('connection-state-change', handleConnectionStateChange);
+        client.on('network-quality', handleNetworkQuality);
+        client.on('exception', (evt) => console.debug('[Meet It] Agora exception', evt));
+
+        // --- 2. Join channel ----------------------------------------------------
+        const uid = encodeUid(name, userRole);
+        localUid = await client.join(appId, CHANNEL_PREFIX + roomId, AGORA_TOKEN, uid);
+
+        // --- 3. Local media + UI ------------------------------------------------
+        setupCallUi();
+        const local = createTile(LOCAL_TILE_ID, { name, role: userRole, isLocal: true });
+
+        const { audio, video, errors } = await createLocalTracks();
+        // The user might have hit "Leave" while the permission prompt was open.
+        if (!client) { audio && audio.close(); video && video.close(); hideJoiningOverlay(); return false; }
+
+        localAudioTrack = audio;
+        localVideoTrack = video;
+        isMicOn = Boolean(audio);
+        isCamOn = Boolean(video);
+        watchLocalTrack(audio, 'microphone');
+        watchLocalTrack(video, 'camera');
+
+        if (localVideoTrack) localVideoTrack.play(local.player, { mirror: true, fit: 'cover' });
+        setTileMicState(LOCAL_TILE_ID, isMicOn);
+        updateControlButtons();
+
+        if (errors.length) {
+          showToast(`Joined without full media: ${errors.join(', ')}. You can retry from the control bar.`, 'warn', { duration: 8000 });
+        }
+
+        // --- 4. Publish ---------------------------------------------------------
+        const toPublish = [localAudioTrack, localVideoTrack].filter(Boolean);
+        if (toPublish.length) await client.publish(toPublish);
+
+        client.enableAudioVolumeIndicator();
+        startTimer();
+        hideJoiningOverlay();
+        showScreen('call');
+        return true;
+      } catch (err) {
+        console.error('[Meet It] Failed to join meeting:', err);
+        await teardown({ silent: true });
+        hideJoiningOverlay();
+        showScreen('lobby');
+        throw err;
+      } finally {
+        isJoining = false;
+      }
+    }
+
+    /** Fills header info and resets controls when entering a call. */
+    function setupCallUi() {
+      ui.grid.innerHTML = '';
+      tiles.clear();
+      ui.codeChipValue.textContent = formatCode(currentRoomId);
+      ui.roleBadge.textContent = userRole === 'host' ? 'Host' : 'Participant';
+      ui.callTimer.textContent = '00:00';
+      showScreen('call');
+      // Re-layout whenever the stage is resized (window resize, rotation, keyboard…)
+      if ('ResizeObserver' in window && !gridObserver) {
+        gridObserver = new ResizeObserver(() => layoutGrid());
+        gridObserver.observe(ui.grid);
+      }
+    }
+
+    /** Maps Agora / app errors to friendly, actionable messages. */
+    function describeJoinError(err) {
+      const text = `${(err && err.code) || ''} ${(err && err.message) || ''}`;
+      if (/NO_APP_ID/.test(text)) return 'Add your Agora App ID in "Connection settings" below before starting a meeting.';
+      if (/SDK_NOT_LOADED/.test(text)) return 'The video engine has not loaded. Check your connection or disable ad-blockers, then reload.';
+      if (/invalid vendor key|can not find appid|INVALID_VENDOR_KEY/i.test(text)) return 'The Agora App ID is invalid. Double-check it in Connection settings.';
+      if (/dynamic use static key|token|DYNAMIC_KEY|INVALID_TOKEN/i.test(text)) {
+        return 'This Agora project requires tokens. Create a project in "Testing mode (App ID only)" or set AGORA_TOKEN.';
+      }
+      if (/NETWORK|CAN_NOT_GET_GATEWAY_SERVER|timeout/i.test(text)) return 'Could not reach the video servers. Check your internet connection and try again.';
+      if (/OPERATION_ABORTED|WS_ABORT/i.test(text)) return 'Joining was cancelled.';
+      return `Could not join the meeting${err && err.message ? `: ${err.message}` : '.'}`;
+    }
+
+    /* =========================================================================
+       10. AGORA EVENT HANDLERS
+       ========================================================================= */
+
+    /** A remote user entered the channel — show their tile right away (avatar until media arrives). */
+    function handleUserJoined(user) {
+      const id = String(user.uid);
+      remoteUsers[id] = user;
+      const { name, role } = parseUid(user.uid);
+      const entry = createTile(id, { name, role });
+      // If they publish nothing (camera & mic off), drop the "connecting" chip after a moment.
+      setTimeout(() => clearConnecting(entry), 4000);
+      // Users already in the room when we join also fire user-joined: don't announce those.
+      if (!isJoining) showToast(`${name} joined the meeting`, 'info', { duration: 2600 });
+    }
+
+    /**
+     * A remote user published audio or video: subscribe and render it.
+     * Creates the tile if user-published arrives before user-joined.
+     */
+    async function handleUserPublished(user, mediaType) {
+      const id = String(user.uid);
+      remoteUsers[id] = user;
+      const { name, role } = parseUid(user.uid);
+      const entry = tiles.get(id) || createTile(id, { name, role });
+
+      try {
+        await client.subscribe(user, mediaType);
+      } catch (err) {
+        console.error(`[Meet It] Subscribe to ${mediaType} of ${name} failed:`, err);
+        showToast(`Couldn't receive ${name}'s ${mediaType}.`, 'warn');
+        return;
+      }
+      // The user may have left (or we may have left) while we were subscribing.
+      if (!client || !tiles.has(id)) return;
+
+      clearConnecting(entry);
+      if (mediaType === 'video' && user.videoTrack) {
+        entry.player.innerHTML = '';
+        user.videoTrack.play(entry.player, { fit: 'cover' });
+      }
+      if (mediaType === 'audio' && user.audioTrack) {
+        user.audioTrack.play();
+        setTileMicState(id, true);
+      }
+    }
+
+    /**
+     * A remote user stopped sending a track (camera off / muted).
+     * The video container is removed from their tile and their avatar shows instead;
+     * the tile itself stays so the grid does not jump around.
+     */
+    function handleUserUnpublished(user, mediaType) {
+      const id = String(user.uid);
+      if (mediaType === 'video') clearTileVideo(id);
+      if (mediaType === 'audio') setTileMicState(id, false);
+    }
+
+    /** Remote mute without unpublishing (track.setMuted on the other side). */
+    function handleUserInfoUpdated(uid, msg) {
+      const id = String(uid);
+      if (msg === 'mute-audio') setTileMicState(id, false);
+      if (msg === 'unmute-audio') setTileMicState(id, true);
+    }
+
+    /** A remote user left (or dropped) — remove only their tile, leaving everyone else untouched. */
+    function handleUserLeft(user, reason) {
+      const id = String(user.uid);
+      const { name } = parseUid(user.uid);
+      delete remoteUsers[id];
+      removeTile(id);
+      const dropped = reason === 'ServerTimeOut';
+      showToast(dropped ? `${name} lost connection` : `${name} left the meeting`, dropped ? 'warn' : 'info', { duration: 2600 });
+    }
+
+    /** Highlights whoever is talking (fires every ~2 s with levels 0–100). */
+    function handleVolumeIndicator(volumes) {
+      const speaking = new Set();
+      volumes.forEach(({ uid, level }) => {
+        if (level < 8) return;
+        // Remote tiles are keyed by uid; anything else in the list is our own audio
+        const id = String(uid);
+        speaking.add(id !== LOCAL_TILE_ID && tiles.has(id) ? id : LOCAL_TILE_ID);
+      });
+      tiles.forEach((entry, id) => entry.el.classList.toggle('speaking', speaking.has(id)));
+    }
+
+    /** Shows a small "Poor network" badge on tiles when quality degrades. */
+    function handleNetworkQuality(stats) {
+      const entry = tiles.get(LOCAL_TILE_ID);
+      if (!entry) return;
+      const worst = Math.max(stats.uplinkNetworkQuality || 0, stats.downlinkNetworkQuality || 0);
+      let badge = entry.el.querySelector('.net-badge');
+      if (worst >= 4) {
+        if (!badge) {
+          badge = document.createElement('span');
+          badge.className = 'net-badge';
+          entry.el.appendChild(badge);
+        }
+        badge.textContent = worst >= 5 ? 'Very poor network' : 'Poor network';
+      } else if (badge) {
+        badge.remove();
+      }
+    }
+
+    let reconnectToast = null;
+    function handleConnectionStateChange(cur, prev, reason) {
+      if (cur === 'RECONNECTING') {
+        reconnectToast = showToast('Connection lost — reconnecting…', 'warn', { duration: 0 });
+      } else if (cur === 'CONNECTED' && prev === 'RECONNECTING') {
+        if (reconnectToast) reconnectToast();
+        reconnectToast = null;
+        showToast('Reconnected', 'success', { duration: 2000 });
+      } else if (cur === 'DISCONNECTED' && !isLeaving && !isJoining && client) {
+        if (reconnectToast) reconnectToast();
+        reconnectToast = null;
+        const msg = reason === 'UID_BANNED' || reason === 'CHANNEL_BANNED'
+          ? 'You were removed from the meeting.'
+          : 'You were disconnected from the meeting.';
+        showToast(msg, 'error');
+        leaveMeeting({ silent: true });
+      }
+    }
+
+    /* =========================================================================
+       11. MIC / CAMERA TOGGLES
+       ========================================================================= */
+
+    function updateControlButtons() {
+      ui.micBtn.classList.toggle('off', !isMicOn);
+      ui.micBtn.setAttribute('aria-pressed', String(isMicOn));
+      ui.micBtn.setAttribute('aria-label', isMicOn ? 'Mute microphone' : 'Unmute microphone');
+      ui.micBtn.querySelector('use').setAttribute('href', isMicOn ? '#i-mic' : '#i-mic-off');
+      ui.micBtn.querySelector('.ctrl-label').textContent = isMicOn ? 'Mute (Ctrl+D)' : 'Unmute (Ctrl+D)';
+
+      ui.camBtn.classList.toggle('off', !isCamOn);
+      ui.camBtn.setAttribute('aria-pressed', String(isCamOn));
+      ui.camBtn.setAttribute('aria-label', isCamOn ? 'Turn camera off' : 'Turn camera on');
+      ui.camBtn.querySelector('use').setAttribute('href', isCamOn ? '#i-cam' : '#i-cam-off');
+      ui.camBtn.querySelector('.ctrl-label').textContent = isCamOn ? 'Stop video (Ctrl+E)' : 'Start video (Ctrl+E)';
+    }
+
+    async function toggleMic() {
+      if (!client || ui.micBtn.classList.contains('pending')) return;
+      ui.micBtn.classList.add('pending');
+      try {
+        if (!localAudioTrack) {
+          // Microphone failed at join time — try again now.
+          const track = await AgoraSDK.createMicrophoneAudioTrack({ AEC: true, ANS: true, AGC: true });
+          if (!client) { track.close(); return; }
+          localAudioTrack = track;
+          watchLocalTrack(track, 'microphone');
+          await client.publish(localAudioTrack);
+          isMicOn = true;
+        } else {
+          // setEnabled(false) stops capturing and unpublishes the track for everyone else
+          await localAudioTrack.setEnabled(!isMicOn);
+          isMicOn = !isMicOn;
+        }
+        setTileMicState(LOCAL_TILE_ID, isMicOn);
+      } catch (err) {
+        console.error('[Meet It] Microphone toggle failed:', err);
+        showToast(`Microphone error: ${describeMediaError(err, 'microphone')}.`, 'error');
+      } finally {
+        ui.micBtn.classList.remove('pending');
+        updateControlButtons();
+      }
+    }
+
+    async function toggleCamera() {
+      if (!client || ui.camBtn.classList.contains('pending')) return;
+      ui.camBtn.classList.add('pending');
+      const local = tiles.get(LOCAL_TILE_ID);
+      try {
+        if (!localVideoTrack) {
+          // Camera failed at join time — try again now.
+          const track = await AgoraSDK.createCameraVideoTrack({ encoderConfig: '720p_2', optimizationMode: 'motion' });
+          if (!client) { track.close(); return; }
+          localVideoTrack = track;
+          watchLocalTrack(track, 'camera');
+          await client.publish(localVideoTrack);
+          isCamOn = true;
+        } else {
+          // setEnabled releases the camera (light turns off) and unpublishes the video track.
+          await localVideoTrack.setEnabled(!isCamOn);
+          isCamOn = !isCamOn;
+        }
+        if (local) {
+          if (isCamOn) { local.player.innerHTML = ''; localVideoTrack.play(local.player, { mirror: true, fit: 'cover' }); }
+          else clearTileVideo(LOCAL_TILE_ID);
+        }
+      } catch (err) {
+        console.error('[Meet It] Camera toggle failed:', err);
+        showToast(`Camera error: ${describeMediaError(err, 'camera')}.`, 'error');
+      } finally {
+        ui.camBtn.classList.remove('pending');
+        updateControlButtons();
+      }
+    }
+
+    /* =========================================================================
+       12. LEAVE MEETING — full cleanup lifecycle
+       ========================================================================= */
+
+    /**
+     * Releases every resource: local tracks (camera light off), publications,
+     * remote subscriptions, the Agora connection, event listeners, timers and DOM.
+     */
+    async function teardown({ silent = false } = {}) {
+      const activeClient = client;
+      client = null; // mark "not in a call" immediately so late events are ignored
+
+      // 1. Stop & close local tracks (releases camera/mic hardware)
+      [localAudioTrack, localVideoTrack].forEach((track) => {
+        if (!track) return;
+        try { track.stop(); } catch (e) { /* already stopped */ }
+        try { track.close(); } catch (e) { /* already closed */ }
+      });
+
+      if (activeClient) {
+        // 2. Unpublish what we were sending
+        try {
+          if (activeClient.localTracks && activeClient.localTracks.length) await activeClient.unpublish();
+        } catch (err) { if (!silent) console.warn('[Meet It] Unpublish failed:', err); }
+
+        // 3. Stop remote playback
+        Object.values(remoteUsers).forEach((user) => {
+          try { user.audioTrack && user.audioTrack.stop(); } catch (e) { /* ignore */ }
+          try { user.videoTrack && user.videoTrack.stop(); } catch (e) { /* ignore */ }
+        });
+
+        // 4. Leave the channel and drop all listeners
+        try { await activeClient.leave(); } catch (err) { if (!silent) console.warn('[Meet It] Leave failed:', err); }
+        try { activeClient.removeAllListeners(); } catch (e) { /* ignore */ }
+      }
+
+      // 5. Reset state
+      localAudioTrack = null;
+      localVideoTrack = null;
+      remoteUsers = {};
+      localUid = null;
+      isMicOn = true;
+      isCamOn = true;
+      stopTimer();
+      if (reconnectToast) { reconnectToast(); reconnectToast = null; }
+
+      // 6. Clear the DOM grid
+      tiles.clear();
+      ui.grid.innerHTML = '';
+      ui.grid.dataset.count = '0';
+      ui.grid.classList.remove('scroll');
+      ui.shareModal.hidden = true;
+      updateControlButtons();
+    }
+
+    async function leaveMeeting({ silent = false } = {}) {
+      if (isLeaving) return;
+      isLeaving = true;
+      ui.leaveBtn.disabled = true;
+      const code = currentRoomId;
+      try {
+        await teardown({ silent });
+        currentRoomId = null;
+        userRole = null;
+        showScreen('lobby');
+        // Keep the code handy so the user can easily rejoin.
+        if (code) ui.codeInput.value = formatCode(code);
+        if (!silent) showToast('You left the meeting.', 'info', { duration: 2400 });
+      } catch (err) {
+        console.error('[Meet It] Error while leaving:', err);
+        showScreen('lobby');
+      } finally {
+        isLeaving = false;
+        ui.leaveBtn.disabled = false;
+        setLobbyBusy(false);
+      }
+    }
+
+    /* =========================================================================
+       13. TIMER
+       ========================================================================= */
+
+    function startTimer() {
+      stopTimer();
+      callStartedAt = Date.now();
+      const tick = () => {
+        const s = Math.floor((Date.now() - callStartedAt) / 1000);
+        const h = Math.floor(s / 3600);
+        const m = String(Math.floor((s % 3600) / 60)).padStart(2, '0');
+        const sec = String(s % 60).padStart(2, '0');
+        ui.callTimer.textContent = h ? `${h}:${m}:${sec}` : `${m}:${sec}`;
+      };
+      tick();
+      timerInterval = setInterval(tick, 1000);
+    }
+    function stopTimer() {
+      if (timerInterval) clearInterval(timerInterval);
+      timerInterval = null;
+    }
+
+    /* =========================================================================
+       14. LOBBY ACTIONS — create & join
+       ========================================================================= */
+
+    function validateName() {
+      const name = ui.nameInput.value.trim().replace(/\s+/g, ' ');
+      if (!name) { setFieldError(ui.nameInput, ui.nameError, 'Please enter your name.'); return null; }
+      if (name.length < 2) { setFieldError(ui.nameInput, ui.nameError, 'Name must be at least 2 characters.'); return null; }
+      setFieldError(ui.nameInput, ui.nameError, '');
+      storageSet(STORAGE_KEYS.name, name);
+      return name;
+    }
+
+    /** Opens settings and focuses the App ID field when it is missing. */
+    function requireAppId() {
+      if (getAppId()) return true;
+      ui.settingsPanel.open = true;
+      ui.appIdInput.focus();
+      showToast(describeJoinError(new Error('NO_APP_ID')), 'warn', { duration: 7000 });
+      return false;
+    }
+
+    async function handleCreate() {
+      const name = validateName();
+      if (!name || !requireAppId()) return;
+      if (!AgoraSDK) { showToast(describeJoinError(new Error('SDK_NOT_LOADED')), 'error'); return; }
+
+      const code = generateMeetingCode();
+      userRole = 'host';
+      setLobbyBusy(true, ui.createBtn);
+      try {
+        const ok = await joinMeeting(code, name);
+        if (ok) openShareModal();
+      } catch (err) {
+        userRole = null;
+        showToast(describeJoinError(err), 'error');
+      } finally {
+        setLobbyBusy(false);
+      }
+    }
+
+    async function handleJoin() {
+      const name = validateName();
+      if (!name) return;
+      const code = normalizeCode(ui.codeInput.value);
+      if (!isValidCode(code)) {
+        setFieldError(ui.codeInput, ui.codeError, `Enter the ${CODE_LENGTH}-digit code your friend shared.`);
+        return;
+      }
+      setFieldError(ui.codeInput, ui.codeError, '');
+      if (!requireAppId()) return;
+      if (!AgoraSDK) { showToast(describeJoinError(new Error('SDK_NOT_LOADED')), 'error'); return; }
+
+      userRole = 'participant';
+      setLobbyBusy(true, ui.joinBtn);
+      try {
+        const ok = await joinMeeting(code, name);
+        if (ok) showToast(`You joined meeting ${formatCode(code)}`, 'success', { duration: 2500 });
+      } catch (err) {
+        userRole = null;
+        showToast(describeJoinError(err), 'error');
+      } finally {
+        setLobbyBusy(false);
+      }
+    }
+
+    function openShareModal() {
+      ui.shareCode.textContent = formatCode(currentRoomId);
+      ui.shareLink.textContent = buildInviteLink(currentRoomId);
+      ui.shareModal.hidden = false;
+      ui.closeShareBtn.focus();
+    }
+    function closeShareModal() { ui.shareModal.hidden = true; }
+
+    /* =========================================================================
+       15. SDK LOADING & INITIALISATION
+       ========================================================================= */
+
+    function onSdkReady() {
+      if (AgoraSDK || !window.AgoraRTC) return;
+      AgoraSDK = window.AgoraRTC;
+      try {
+        AgoraSDK.setLogLevel(3);     // errors only in the console
+        if (AgoraSDK.disableLogUpload) AgoraSDK.disableLogUpload();
+      } catch (e) { /* non-critical */ }
+
+      // Mobile browsers may block audio autoplay until the user taps something.
+      AgoraSDK.onAutoplayFailed = () => {
+        showToast('Tap to enable meeting audio.', 'warn', {
+          duration: 0,
+          action: { label: 'Enable', onClick: () => Object.values(remoteUsers).forEach((u) => u.audioTrack && u.audioTrack.play()) },
+        });
+      };
+
+      if (!window.isSecureContext) {
+        setSdkStatus('err', 'HTTPS required');
+        showToast('Camera and microphone need HTTPS. Open Meet It via https:// (Vercel does this automatically) or localhost.', 'error', { duration: 0 });
+      } else if (typeof AgoraSDK.checkSystemRequirements === 'function' && !AgoraSDK.checkSystemRequirements()) {
+        setSdkStatus('warn', 'Browser not fully supported');
+        showToast('This browser may not support video calls. Try the latest Chrome, Edge, Firefox or Safari.', 'warn', { duration: 8000 });
+      } else {
+        if (getAppId()) setSdkStatus('ok', 'Ready to meet');
+        else setSdkStatus('warn', 'Add App ID to start');
+      }
+    }
+
+    function onSdkFailed() {
+      if (AgoraSDK) return;
+      setSdkStatus('err', 'Video engine failed to load');
+      showToast('Could not load the video engine. Check your connection or disable ad-blockers, then reload.', 'error', { duration: 0 });
+    }
+
+    /** Reads ?room=123456&appid=... from invite links. */
+    function applyUrlParams() {
+      const params = new URLSearchParams(window.location.search);
+      const room = normalizeCode(params.get('room') || params.get('code'));
+      const appid = (params.get('appid') || '').trim();
+      if (appid && isValidAppId(appid) && !isValidAppId(AGORA_APP_ID)) storageSet(STORAGE_KEYS.appId, appid);
+      if (isValidCode(room)) {
+        ui.codeInput.value = formatCode(room);
+        showToast(`You've been invited to meeting ${formatCode(room)}. Enter your name and press Join.`, 'info', { duration: 6000 });
+      }
+      // Remove the App ID from the address bar after storing it
+      if (appid) {
+        params.delete('appid');
+        const qs = params.toString();
+        history.replaceState(null, '', `${window.location.pathname}${qs ? `?${qs}` : ''}`);
+      }
+      return isValidCode(room);
+    }
+
+    function bindEvents() {
+      ui.createBtn.addEventListener('click', handleCreate);
+      ui.joinBtn.addEventListener('click', handleJoin);
+
+      // Enter key: in the code field -> join, in the name field -> join if a code is present, else create
+      ui.nameInput.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter') return;
+        e.preventDefault();
+        isValidCode(normalizeCode(ui.codeInput.value)) ? handleJoin() : handleCreate();
+      });
+      ui.codeInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); handleJoin(); } });
+      ui.nameInput.addEventListener('input', () => setFieldError(ui.nameInput, ui.nameError, ''));
+
+      // Live-format the code as "123 456" and keep digits only
+      ui.codeInput.addEventListener('input', () => {
+        const digits = normalizeCode(ui.codeInput.value);
+        ui.codeInput.value = digits.length > 3 ? `${digits.slice(0, 3)} ${digits.slice(3)}` : digits;
+        if (ui.codeInput.classList.contains('invalid')) setFieldError(ui.codeInput, ui.codeError, '');
+      });
+
+      ui.saveAppIdBtn.addEventListener('click', () => { if (saveAppId() && AgoraSDK) setSdkStatus('ok', 'Ready to meet'); });
+      ui.appIdInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); ui.saveAppIdBtn.click(); } });
+
+      // Call controls
+      ui.micBtn.addEventListener('click', toggleMic);
+      ui.camBtn.addEventListener('click', toggleCamera);
+      ui.leaveBtn.addEventListener('click', () => leaveMeeting());
+      ui.inviteBtn.addEventListener('click', () => copyToClipboard(buildInviteLink(currentRoomId), 'Invite link copied'));
+      ui.codeChip.addEventListener('click', () => copyToClipboard(currentRoomId, `Meeting code ${formatCode(currentRoomId)} copied`));
+
+      // Share modal
+      ui.copyCodeBtn.addEventListener('click', () => copyToClipboard(currentRoomId, `Meeting code ${formatCode(currentRoomId)} copied`));
+      ui.copyLinkBtn.addEventListener('click', () => copyToClipboard(buildInviteLink(currentRoomId), 'Invite link copied'));
+      ui.closeShareBtn.addEventListener('click', closeShareModal);
+      ui.shareModal.addEventListener('click', (e) => { if (e.target === ui.shareModal) closeShareModal(); });
+
+      // Keyboard shortcuts while in a call
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !ui.shareModal.hidden) { closeShareModal(); return; }
+        if (ui.call.hidden || !(e.ctrlKey || e.metaKey)) return;
+        const key = e.key.toLowerCase();
+        if (key === 'd') { e.preventDefault(); toggleMic(); }
+        if (key === 'e') { e.preventDefault(); toggleCamera(); }
+      });
+
+      window.addEventListener('resize', layoutGrid);
+
+      // Best-effort cleanup if the tab is closed mid-call, so others see us leave immediately
+      window.addEventListener('pagehide', () => { if (client) teardown({ silent: true }); });
+      window.addEventListener('beforeunload', (e) => {
+        if (client && !isLeaving) { e.preventDefault(); e.returnValue = ''; }
+      });
+    }
+
+    function init() {
+      $('year').textContent = new Date().getFullYear();
+      ui.nameInput.value = storageGet(STORAGE_KEYS.name) || '';
+      bindEvents();
+      const invited = applyUrlParams();
+      refreshAppIdUi();
+      updateControlButtons();
+
+      // Focus the most useful field
+      if (!ui.nameInput.value) ui.nameInput.focus();
+      else if (invited) ui.joinBtn.focus();
+
+      // The SDK <script> in <head> is synchronous, so it is normally ready already.
+      if (window.AgoraRTC) onSdkReady();
+      window.addEventListener('agora-sdk-ready', onSdkReady);
+      window.addEventListener('agora-sdk-failed', onSdkFailed);
+      // Safety net in case neither CDN responds
+      delay(15000).then(() => { if (!AgoraSDK && !window.AgoraRTC) onSdkFailed(); else onSdkReady(); });
+    }
+
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>
